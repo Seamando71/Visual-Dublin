@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Display a popup on hover</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        .mapboxgl-popup {
+            max-width: 400px;
+            font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <script>
+        mapboxgl.accessToken = 'pk.eyJ1Ijoic2VhbWFuZG84NSIsImEiOiJjbHhucmV6OTcwNmw3Mm1xdG1jcWFha21xIn0.6LKoN2V0KuF6ZhlBRSkyxw';
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [-6.259, 53.348],
+
+            pitch: 70, // pitch in degrees
+            bearing: -60, // bearing in degrees
+            zoom: 12.85
+        });
+
+        map.on('load', () => {
+            fetch('data.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    map.addSource('places', {
+                        'type': 'geojson',
+                        'data': data
+                    });
+
+                    map.addLayer({
+                        'id': 'places',
+                        'type': 'fill-extrusion',
+                        'source': 'places',
+                        'paint': {
+                            'fill-extrusion-color': ['get', 'color'],
+                            'fill-extrusion-height': ['get', 'height'],
+                            'fill-extrusion-base': ['get', 'base_height'],
+                            'fill-extrusion-opacity': 0.8
+                        }
+                    });
+
+                    const popup = new mapboxgl.Popup({
+                        closeButton: false,
+                        closeOnClick: false
+                    });
+
+                    map.on('mouseenter', 'places', (e) => {
+                        map.getCanvas().style.cursor = 'pointer';
+
+                        const coordinates = e.features[0].geometry.coordinates[0][0].slice();
+                        const description = e.features[0].properties.description;
+
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+
+                        popup.setLngLat(coordinates).setHTML(description).addTo(map);
+                    });
+
+                    map.on('mouseleave', 'places', () => {
+                        map.getCanvas().style.cursor = '';
+                        popup.remove();
+                    });
+                });
+        });
+        // Add zoom and rotation controls to the map.
+        map.addControl(new mapboxgl.NavigationControl());
+    </script>
+
+</body>
+
+</html>
